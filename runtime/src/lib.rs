@@ -175,7 +175,9 @@ impl sudo::Trait for Runtime {
 	type Proposal = Call;
 }
 
-impl substratekitties::Trait for Runtime { }
+impl substratekitties::Trait for Runtime {
+	type Event = Event;
+ }
 
 construct_runtime!(
     pub enum Runtime with Log(InternalLog: DigestItem<Hash, Ed25519AuthorityId>) where
@@ -190,7 +192,7 @@ construct_runtime!(
         Indices: indices,
         Balances: balances,
         Sudo: sudo,
-        Substratekitties: substratekitties::{Module, Call, Storage},
+        Substratekitties: substratekitties::{Module, Call, Storage, Event<T>},
     }
 );
 
