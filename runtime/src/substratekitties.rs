@@ -1,4 +1,5 @@
-use srml_support::{StorageMap, dispatch::Result,decl_storage,decl_module};
+use parity_codec::Encode;
+use srml_support::{StorageMap,StorageValue, dispatch::Result,decl_storage,decl_module};
 use system::ensure_signed;
 use runtime_primitives::traits::{As, Hash};
 
@@ -10,14 +11,19 @@ pub struct Kitty<Hash, Balance> {
     gen: u64,
 }
 
-
 pub trait Trait: balances::Trait {}
 
 decl_storage! {
     trait Store for Module<T: Trait> as KittyStorage {
-        OwnedKitty: map T::AccountId => Kitty<T::Hash, T::Balance>;
+        Kitties get(kitty): map T::Hash => Kitty<T::Hash, T::Balance>;
+        KittyOwner get(owner_of): map T::Hash => Option<T::AccountId>;
+        OwnedKitty get(kitty_of_owner): map T::AccountId => T::Hash;
+
+        Nonce: u64;
     }
 }
+
+
 
 
 decl_module! {
@@ -26,14 +32,24 @@ decl_module! {
         fn create_kitty(origin) -> Result {
             let sender = ensure_signed(origin)?;
 
+            let nonce = <Nonce<T>>::get();
+            let random_hash = (<system::Module<T>>::random_seed(), &sender, nonce)
+                .using_encoded(<T as system::Trait>::Hashing::hash);
+
+            assert_eq!(<KittyOwner<T>>::exists(random_hash), false,"Kittie already exist");
+
             let new_kitty = Kitty {
-                id: <T as system::Trait>::Hashing::hash_of(&0),
-                dna: <T as system::Trait>::Hashing::hash_of(&0),
+                id: random_hash,
+                dna: random_hash,
                 price: <T::Balance as As<u64>>::sa(0),
                 gen: 0,
             };
 
-            <OwnedKitty<T>>::insert(&sender, new_kitty);
+            <Kitties<T>>::insert(random_hash, new_kitty);
+            <KittyOwner<T>>::insert(random_hash, &sender);
+            <OwnedKitty<T>>::insert(&sender, random_hash);
+
+            <Nonce<T>>::mutate(|n| *n += 1);
 
             Ok(())
         }
